@@ -45,10 +45,15 @@ class RetrieverBiencoder(nn.Module):
     
 #Single Bert Polyencoder 
 class RetrieverPolyencoder(nn.Module):
-    def __init__(self, bert, max_len = 300, hidden_dim = 768, out_dim = 64, num_layers = 2, dropout=0.1, device=device):
+    def __init__(self, bert, max_len = 300, hidden_dim = 768, out_dim = 64, num_layers = 2, dropout=0.1, device=None):
         super().__init__()
-
-        self.device = device
+        if device==None:
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+            else:
+                self.device = torch.device("cpu")
+        else:
+            self.device = device
         self.hidden_dim = hidden_dim
         self.max_len = max_len
         self.out_dim = out_dim
@@ -121,19 +126,14 @@ class RetrieverPolyencoder(nn.Module):
             from these tokens using appropriate mask on the target tokens loss.
         """
         batch_size = context.shape[0]
-        seq_len = response.shape[1]
         
         # Context
-        context_encoded = self.bert(context,context_mask)[0][:,0,:]
+        context_encoded = self.bert(context,context_mask)[0]
         pos_emb = self.pos_emb(torch.arange(self.max_len).to(self.device))
         context_att = self.attention(pos_emb, context_encoded, context_encoded, context_mask)
 
         # Response
-        print(response.shape)
         response_encoded = self.bert(response, response_mask)[0][:,0,:]
-        print(response_encoded.shape)
-        response_encoded = response_encoded.view(batch_size, -1)
-
         
         response_encoded = response_encoded.unsqueeze(0).expand(batch_size, batch_size, response_encoded.shape[1]) 
         context_emb = self.attention(response_encoded, context_att, context_att).squeeze() 
@@ -145,10 +145,16 @@ class RetrieverPolyencoder(nn.Module):
     
 #Double Bert Polyencoder
 class RetrieverPolyencoder_double(nn.Module):
-    def __init__(self, contextBert, candidateBert, vocab, max_len = 300, hidden_dim = 768, out_dim = 64, num_layers = 2, dropout=0.1, device=device):
+    def __init__(self, contextBert, candidateBert, vocab, max_len = 300, hidden_dim = 768, out_dim = 64, num_layers = 2, dropout=0.1, device=None):
         super().__init__()
 
-        self.device = device
+        if device==None:
+            if torch.cuda.is_available():
+                self.device = torch.device("cuda")
+            else:
+                self.device = torch.device("cpu")
+        else:
+            self.device = device
         self.hidden_dim = hidden_dim
         self.max_len = max_len
         self.out_dim = out_dim
